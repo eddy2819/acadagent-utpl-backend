@@ -1,0 +1,134 @@
+name: acadagent-utpl
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    environment:
+      DATABASE_URL: ${DOCKER_DATABASE_URL:?Define DOCKER_DATABASE_URL en .env}
+      REDIS_URL: ${DOCKER_REDIS_URL:?Define DOCKER_REDIS_URL en .env}
+      CHROMA_URL: ${DOCKER_CHROMA_URL:?Define DOCKER_CHROMA_URL en .env}
+      OLLAMA_URL: ${DOCKER_OLLAMA_URL:?Define DOCKER_OLLAMA_URL en .env}
+      MINIO_ENDPOINT: ${DOCKER_MINIO_ENDPOINT:?Define DOCKER_MINIO_ENDPOINT en .env}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Define MINIO_ROOT_USER en .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Define MINIO_ROOT_PASSWORD en .env}
+      MINIO_SECURE: ${MINIO_SECURE:?Define MINIO_SECURE en .env}
+      MINIO_BUCKET: ${MINIO_BUCKET:?Define MINIO_BUCKET en .env}
+      OLLAMA_CHAT_MODEL: ${OLLAMA_CHAT_MODEL:?Define OLLAMA_CHAT_MODEL en .env}
+      OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:?Define OLLAMA_EMBEDDING_MODEL en .env}
+
+    ports:
+      - "127.0.0.1:8000:8000"
+
+    volumes:
+      - ./src:/app/src
+      - ./scripts:/app/scripts
+      - ./tests:/app/tests
+      - ./migrations:/app/migrations
+
+    command:
+      - uvicorn
+      - src.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --reload
+      - --reload-dir
+      - /app/src
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Define POSTGRES_DB en .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Define POSTGRES_USER en .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}
+
+    ports:
+      - "127.0.0.1:5433:5432"
+
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  pgadmin:
+    image: dpage/pgadmin4:9.19
+
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:?Define PGADMIN_DEFAULT_EMAIL en .env}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:?Define PGADMIN_DEFAULT_PASSWORD en .env}
+
+    ports:
+      - "127.0.0.1:5050:80"
+
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+
+    ports:
+      - "127.0.0.1:6379:6379"
+
+  chroma:
+    image: chromadb/chroma:1.0.20
+
+    ports:
+      - "127.0.0.1:8001:8000"
+
+    volumes:
+      - chroma_data:/data
+
+  minio:
+    image: quay.io/minio/aistor/minio:latest
+
+    command: ["minio", "server", "/data", "--console-address", ":9001", "--license", "/minio.license"]
+
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Define MINIO_ROOT_USER en .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Define MINIO_ROOT_PASSWORD en .env}
+
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+
+    volumes:
+      - minio_data:/data
+      - type: bind
+        source: ./secrets/minio.license
+        target: /minio.license
+        read_only: true
+        bind:
+          create_host_path: false
+
+  ollama:
+    image: ollama/ollama
+
+    ports:
+      - "127.0.0.1:11434:11434"
+
+    volumes:
+      - ollama_models:/root/.ollama
+
+volumes:
+  pg_data:
+  pgadmin_data:
+  chroma_data:
+  minio_data:
+  ollama_models:
