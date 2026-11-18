@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import SecretStr
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -27,6 +27,9 @@ class Settings(BaseSettings):
 
     ollama_chat_model: str
     ollama_embedding_model: str
+    jwt_secret: SecretStr = Field(min_length=32, max_length=64)
+    jwt_algorithm: str = Field(default="HS256")
+    jwt_access_minutes: int = Field(gt=0, default=30)
 
 
 @lru_cache

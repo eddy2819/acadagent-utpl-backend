@@ -30,6 +30,7 @@ services:
       - ./scripts:/app/scripts
       - ./tests:/app/tests
       - ./migrations:/app/migrations
+      - ./alembic.ini:/app/alembic.ini:ro
 
     command:
       - uvicorn
@@ -65,23 +66,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
-
-  pgadmin:
-    image: dpage/pgadmin4:9.19
-
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:?Define PGADMIN_DEFAULT_EMAIL en .env}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:?Define PGADMIN_DEFAULT_PASSWORD en .env}
-
-    ports:
-      - "127.0.0.1:5050:80"
-
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-
-    depends_on:
-      postgres:
-        condition: service_healthy
 
   redis:
     image: redis:7-alpine
@@ -131,7 +115,6 @@ services:
 
 volumes:
   pg_data:
-  pgadmin_data:
   chroma_data:
   minio_data:
   ollama_models:
