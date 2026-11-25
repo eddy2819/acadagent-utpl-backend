@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr
 
-from src.models.user import UserRole
+from src.schemas.role import RoleRead
 
 
 class UserRead(BaseModel):
@@ -11,6 +11,6 @@ class UserRead(BaseModel):
 
     id: UUID
     email: EmailStr
-    role: UserRole
+    roles: list[RoleRead]
     is_active: bool
     created_at: datetime

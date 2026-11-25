@@ -1,18 +1,14 @@
 from datetime import datetime
-from enum import Enum
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from sqlalchemy import Boolean, DateTime, String, Uuid, func
-from sqlalchemy import Enum as SqlEnum
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db.base import Base
 
-
-class UserRole(str, Enum):
-    STUDENT = "student"
-    SECRETARY = "secretary"
-    EVALUATOR = "evaluator"
+if TYPE_CHECKING:
+    from src.models.role import Role
 
 
 class User(Base):
@@ -35,17 +31,6 @@ class User(Base):
         nullable=False,
     )
 
-    role: Mapped[UserRole] = mapped_column(
-        SqlEnum(
-            UserRole,
-            name="user_role",
-            native_enum=False,
-            create_constraint=True,
-            values_callable=lambda roles: [role.value for role in roles],
-        ),
-        nullable=False,
-    )
-
     is_active: Mapped[bool] = mapped_column(
         Boolean,
         default=True,
@@ -56,4 +41,14 @@ class User(Base):
         DateTime(timezone=True),
         server_default=func.now(),
         nullable=False,
+    )
+
+    roles: Mapped[list["Role"]] = relationship(
+        "Role",
+        secondary="user_roles",
+        primaryjoin="User.id == UserRoleAssignment.user_id",
+        secondaryjoin="Role.id == UserRoleAssignment.role_id",
+        viewonly=True,
+        lazy="selectin",
+        order_by="Role.code",
     )

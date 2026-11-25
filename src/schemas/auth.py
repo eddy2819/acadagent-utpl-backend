@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr
 
-from src.models.user import UserRole
+from src.enums import UserRole
 
 
 class RegisterRequest(BaseModel):
@@ -10,19 +10,21 @@ class RegisterRequest(BaseModel):
         extra="forbid",
         json_schema_extra={
             "example": {
-                "email": "user@example.com",
-                "password": "string",
+                "email": "estudiante@example.com",
+                "password": "ClaveDePrueba2026!",
                 "role": "student",
             }
         },
     )
 
     email: EmailStr
-    password: SecretStr = Field(min_length=6, max_length=128)
-    role: UserRole
+    password: SecretStr = Field(min_length=8, max_length=128)
+    role: UserRole = UserRole.STUDENT
 
 
 class LoginRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     email: EmailStr
     password: SecretStr
 
